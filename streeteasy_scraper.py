@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import re
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
@@ -20,7 +21,7 @@ HEADERS = {
         "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/118.0"
     )
 }
-FIELDS = ["title", "price", "beds", "baths", "sqft", "neighborhood", "address", "url"]
+FIELDS = ["address", "unit_type", "neighborhood", "price", "beds", "baths", "sqft", "url"]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -45,57 +46,88 @@ def to_float(text: Optional[str]) -> Optional[float]:
         return float(text)
     except ValueError:
         return None
+    
+def parse_title(title_text):
+    """Extracts unit type and neighborhood from a title string."""
+    if not title_text:
+        return None, None
 
+    # Normalize all whitespace
+    cleaned = re.sub(r'\s+', ' ', title_text).strip()
+
+    # Fix jammed 'in' (e.g., "unitin Chelsea" → "unit in Chelsea")
+    cleaned = re.sub(r'(\w)in ', r'\1 in ', cleaned, count=1)
+
+    # Now split on the first ' in '
+    if " in " in cleaned:
+        unit_type, neighborhood = cleaned.split(" in ", 1)
+        return unit_type.strip(), neighborhood.strip()
+    else:
+        return cleaned, None
+    
+def parse_sqft(sqft_text):
+    """Parses a square footage string like '574 ft²' into an integer."""
+    # Gets the digits, but ignores the superscript 2 for ft^2.
+    if sqft_text and sqft_text.strip() != "-ft²":
+        match = re.search(r'\d[\d,]*', sqft_text)  # Match numbers like 1,200 or 574
+        if match:
+            return int(match.group(0).replace(",", ""))
+    return None
+
+def parse_number(text):
+    match = re.search(r'-?\d+\.?\d*', text)
+    return float(match.group()) if match else None
 
 def parse_listing(card: BeautifulSoup) -> Dict[str, Any]:
+
+    # --- Initialize all fields as None ---
+    address = unit_type = neighborhood = price = beds = baths = sqft = url = None
+
     try:
         title_tag = card.select_one('p[class*="ListingDescription-module__title"]')
-        title_raw = title_tag.get_text(strip=True) if title_tag else ""
-        title = title_raw.replace("Rental unitin", "Rental unit in").strip()
+        if title_tag:
+            full_title = title_tag.get_text(strip=True)
+            unit_type, neighborhood = parse_title(full_title)
 
         address_tag = card.select_one('a[class*="addressTextAction"]')
-        price_raw = card.select_one('span[class*="PriceInfo-module__price"]')
-        price_text = price_raw.get_text(strip=True) if price_raw else ""
+        if address_tag:
+            address = address_tag.get_text(strip=True)
+            url = address_tag.get("href")
 
-        bed = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(1) span')
-        bath = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(2) span')
-        sqft_raw = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(3) span')
-        sqft_text = sqft_raw.get_text(strip=True) if sqft_raw else ""
+        price_tag = card.select_one('span[class*="PriceInfo-module__price"]')
+        if price_tag:
+            price_text = price_tag.get_text(strip=True)
+            price = int(price_text.replace('$', '').replace(',', ''))
 
-        price_clean = None
-        if price_text:
-            price_clean = int(price_text.replace("$", "").replace(",", "").strip())
+        bed_tag = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(1) span')
+        if bed_tag:
+            beds_text = bed_tag.get_text(strip=True)
+            beds = parse_number(beds_text)
 
-        sqft_clean = None
-        if sqft_text and sqft_text != "-ft²":
-            sqft_clean = int("".join(filter(str.isdigit, sqft_text)))
+        bath_tag = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(2) span')
+        if bath_tag:
+            baths_text = bath_tag.get_text(strip=True)
+            baths = parse_number(baths_text)
 
-        bed_text = bed.get_text(strip=True) if bed else None
-        bath_text = bath.get_text(strip=True) if bath else None
-
-        beds = to_float(bed_text)
-        baths = to_float(bath_text)
-
-        neighborhood = None
-        if " in " in title:
-            neighborhood = title.split(" in ", 1)[1].strip()
-        elif title:
-            neighborhood = title.replace("Rental unit in ", "").strip()
+        sqft_tag = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(3) span')
+        sqft_text = sqft_tag.get_text(strip=True) if sqft_tag else ""
+        if sqft_text:
+            sqft = parse_sqft(sqft_text)
 
         return {
-            "title": title,
-            "price": price_clean,
+            "address": address,
+            "unit_type": unit_type,
+            "neighborhood": neighborhood,
+            "price": price,
             "beds": beds,
             "baths": baths,
-            "sqft": sqft_clean,
-            "neighborhood": neighborhood,
-            "address": address_tag.get_text(strip=True) if address_tag else None,
-            "url": address_tag["href"] if address_tag else None,
+            "sqft": sqft,
+            "url": url,
         }
+
     except Exception as e:
         logging.warning(f"Error parsing listing: {e}")
         return {}
-
 
 def scrape_listings(target: int = LISTINGS_TARGET) -> List[Dict[str, Any]]:
     listings: List[Dict[str, Any]] = []
@@ -154,131 +186,3 @@ if __name__ == "__main__":
     rows = scrape_listings(target)
     save_to_csv(rows)
     logging.info("Scraping complete. ✔︎")
-
-
-# from __future__ import annotations
-
-# import csv
-# import sys
-# import time
-# from pathlib import Path
-# from typing import Any, Dict, List
-
-# import pandas as pd
-# import requests
-# from bs4 import BeautifulSoup
-
-# # --------------------------- Configuration ----------------------------------
-# LISTINGS_TARGET = 500  # default number of listings to collect
-# CSV_PATH = Path("data/streeteasy_listings.csv")
-# REQUEST_DELAY = 2  # seconds between page requests
-# BASE_URL = "https://streeteasy.com/for-rent/manhattan/beds:1?page={page}"
-# HEADERS = {
-#     "User-Agent": (
-#         "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/118.0"
-#     )
-# }
-
-# # Fields we plan to capture
-# FIELDS = [
-#     "title",
-#     "price",
-#     "beds",
-#     "baths",
-#     "sqft",
-#     "neighborhood",
-#     "address",
-#     "url",
-# ]
-
-# # --------------------------- Helper functions -------------------------------
-
-# def fetch_page(page_num: int) -> BeautifulSoup:
-#     """GET a search results page and return its BeautifulSoup object."""
-#     url = BASE_URL.format(page=page_num)
-#     resp = requests.get(url, headers=HEADERS, timeout=15)
-#     resp.raise_for_status()
-#     return BeautifulSoup(resp.text, "html.parser")
-
-
-# def parse_listing(card: BeautifulSoup) -> Dict[str, Any]:
-#     """Extract data from a result card → dict matching `FIELDS`."""
-#     try:
-#         title = card.select_one('p[class*="ListingDescription-module__title"]')
-#         address_tag = card.select_one('a[class*="addressTextAction"]')
-#         price = card.select_one('span[class*="PriceInfo-module__price"]')
-
-#         bed = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(1) span')
-#         bath = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(2) span')
-#         sqft = card.select_one('ul[class*="BedsBathsSqft"] li:nth-of-type(3) span')
-
-#         return {
-#             "title": title.get_text(strip=True) if title else None,
-#             "price": price.get_text(strip=True) if price else None,
-#             "beds": bed.get_text(strip=True) if bed else None,
-#             "baths": bath.get_text(strip=True) if bath else None,
-#             "sqft": sqft.get_text(strip=True) if sqft else None,
-#             "neighborhood": title.get_text(strip=True).replace("Rental Unit in ", "") if title else None,
-#             "address": address_tag.get_text(strip=True) if address_tag else None,
-#             "url": address_tag["href"] if address_tag else None,
-#         }
-#     except Exception as e:
-#         print(f"Error parsing listing: {e}")
-#         return {}
-
-
-# def scrape_listings(target: int = LISTINGS_TARGET) -> List[Dict[str, Any]]:
-#     """Walk paginated search results until we hit `target` rows."""
-#     listings: List[Dict[str, Any]] = []
-#     page = 1
-
-#     while len(listings) < target:
-#         soup = fetch_page(page)
-#         cards = soup.select('li.sc-541ed69f-1, article[data-testid="search-result"]')
-#         if not cards:
-#             print(f"No cards found on page {page}. Stopping scrape.")
-#             break
-
-#         for card in cards:
-#             if len(listings) >= target:
-#                 break
-#             parsed = parse_listing(card)
-#             if parsed:
-#                 listings.append(parsed)
-
-#         print(f"Page {page}: collected {len(listings)} listings total …")
-#         page += 1
-#         time.sleep(REQUEST_DELAY)
-
-#     return listings
-
-
-# def save_to_csv(records: List[Dict[str, Any]], path: Path = CSV_PATH) -> None:
-#     """Write scraped records to a CSV file."""
-#     path.parent.mkdir(parents=True, exist_ok=True)
-#     df = pd.DataFrame(records, columns=FIELDS)
-#     df.to_csv(path, index=False)
-
-#     # Use absolute path first, then display relative form if possible
-#     abs_path = path.resolve()
-#     try:
-#         rel_path = abs_path.relative_to(Path.cwd().resolve())
-#         display_path = rel_path
-#     except ValueError:
-#         display_path = abs_path
-
-#     print(f"Saved {len(records)} listings → {display_path}")
-
-
-# # --------------------------- Entry point ------------------------------------
-# if __name__ == "__main__":
-#     try:
-#         target = int(sys.argv[1]) if len(sys.argv) > 1 else LISTINGS_TARGET
-#     except ValueError:
-#         print("Usage: python streeteasy_scraper.py [num_listings]")
-#         sys.exit(1)
-
-#     print(f"Starting scrape for {target} listings …")
-#     rows = scrape_listings(target)
-#     save_to_csv(rows)
-#     print("Done.  ✔︎")

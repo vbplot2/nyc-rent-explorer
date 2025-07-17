@@ -1,16 +1,11 @@
-title,price,beds,baths,sqft,neighborhood,address,url
-Rental unit in Murray Hill,6598,,,,Murray Hill,626 1st Avenue #W33L,https://streeteasy.com/building/the-copper/w33l
-Rental unit in West Chelsea,6250,,,,West Chelsea,606 West 30th Street #26G,https://streeteasy.com/building/606w30-606-west-30th-street-new_york/26g
-Rental unit in Financial District,5285,,,,Financial District,55 Broad Street #221,https://streeteasy.com/building/55-broad-street-new_york/221?infeed=1
-Rental unit in Financial District,6360,,,,Financial District,84 William Street #P103,https://streeteasy.com/building/the-howell/p103
-Rental unit in Hell's Kitchen,4400,,,,Hell's Kitchen,330 West 56th Street #4C,https://streeteasy.com/building/330-west-56-street-new_york/4c
-Rental unit in Hudson Yards,6295,,,,Hudson Yards,555 10th Avenue #48I,https://streeteasy.com/building/555ten-555-10th-avenue-new_york/48i
-Rental unit in Chelsea,6795,,,,Chelsea,335 8th Avenue #405,https://streeteasy.com/building/mabel-335-8th-avenue-new_york/405
-Rental unit in Fulton/Seaport,5849,,,,Fulton/Seaport,19 Dutch Street #48F,https://streeteasy.com/building/19-dutch/48f
-Mixed-use Buildingin Hamilton Heights,2800,,,,Mixed-use Buildingin Hamilton Heights,1848 Amsterdam Avenue #3D,https://streeteasy.com/building/1848-amsterdam-avenue-new_york/3d
-Rental unit in Central Harlem,3950,,,,Central Harlem,2035 5th Avenue #7F,https://streeteasy.com/building/ray-harlem/7f?infeed=1
-Rental unit in Lincoln Square,5495,,,,Lincoln Square,21 West End Avenue #2813,https://streeteasy.com/building/21-west-end-avenue-new_york/2813
-Rental unit in Tribeca,5950,,,,Tribeca,95 Worth Street #1007,https://streeteasy.com/building/saranac-95-worth-street-new_york/1007
-Rental unit in Hudson Yards,5465,,,,Hudson Yards,555 10th Avenue #15F,https://streeteasy.com/building/555ten-555-10th-avenue-new_york/15f
-Rental unit in Kips Bay,5595,,,,Kips Bay,154 East 29th Street #1607,https://streeteasy.com/building/habitat-154-east-29th-street-new_york/1607
-Rental unit in Murray Hill,6250,,,,Murray Hill,509 3rd Avenue #29G,https://streeteasy.com/building/the-murray/29g?featured=1
+address,unit_type,neighborhood,price,beds,baths,sqft,url
+509 3rd Avenue #23A,Rental unit,Murray Hill,6195,1.0,1.0,,https://streeteasy.com/building/the-murray/23a?featured=1
+554 West 54th Street #22W,Rental unit,Hell's Kitchen,5995,1.0,1.0,,https://streeteasy.com/building/forte-select-at-mercedes-house/22w?featured=1
+100 West 31st Street #18J,Rental unit,Midtown South,6757,1.0,1.0,,https://streeteasy.com/building/eos-100-west-31st-street-new_york/18j
+243 West 28th Street #S-05A,Rental unit,Chelsea,6188,1.0,1.0,,https://streeteasy.com/building/ruby-chelsea/s05a
+4650 Broadway #1206,Rental unit,Fort George,3560,1.0,1.0,648.0,https://streeteasy.com/building/forty-six-fifty/1206?infeed=1
+189 West 89th Street #011P,Rental unit,Upper West Side,5449,1.0,1.0,659.0,https://streeteasy.com/building/the-sagamore/011p
+1975 Madison Avenue #314,Rental unit,Central Harlem,4090,1.0,1.0,,https://streeteasy.com/building/1975-madison/314
+250 West 19th Street #02D,Rental unit,Chelsea,5495,1.0,1.0,,https://streeteasy.com/building/the-grove-250-west-19th-street-new_york/02d
+501 West 113th Street #1205,Rental unit,Morningside Heights,5050,1.0,1.0,764.0,https://streeteasy.com/building/1080-amsterdam/1205
+315 West 33rd Street #0-19F,Rental unit,Hudson Yards,5466,1.0,1.0,643.0,https://streeteasy.com/building/the-olivia/019f
